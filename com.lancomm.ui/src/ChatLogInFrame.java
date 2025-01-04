@@ -1,12 +1,13 @@
-package com.lancomm.ui;
-
 import javax.swing.*;
 import java.awt.*;
+import java.io.*;
+import java.net.Socket;
 
 public class ChatLogInFrame extends JFrame {
     private JTextField nicknameField;
     private JButton enterButton;
     private JButton cancelButton;
+    private Socket socket;//当前登录的客户端的通信管道
 
     public ChatLogInFrame() {
         // 设置窗口标题
@@ -60,8 +61,38 @@ public class ChatLogInFrame extends JFrame {
 
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
+        enterButton.addActionListener(e -> {
+            String nickname = nicknameField.getText().trim();
+            nicknameField.setText("");
+            if (!nickname.isEmpty()) {
+                try {
+                    logIn(nickname);
+                    new ChatRoomFrame(nickname,socket);//启动聊天界面
+                    this.dispose();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                dispose();
+            }else {
+                JOptionPane.showMessageDialog(this, "Nickname cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> System.exit(0));
+
         // 设置窗口可见
         setVisible(true);
+    }
+
+    private void logIn(String nickname) throws Exception {
+        //创建socket管道 请求于服务端socket连接
+        socket = new Socket(Constants.SERVER_IP,Constants.SERVER_PORT);
+        //发送消息类型和昵称
+        DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+        dataOutputStream.writeInt(1);
+        dataOutputStream.writeUTF(nickname);
+        dataOutputStream.flush();
+
     }
 
 }

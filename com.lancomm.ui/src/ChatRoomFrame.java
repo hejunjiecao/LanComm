@@ -1,14 +1,19 @@
-package com.lancomm.ui;
-
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.List;
 
 public class ChatRoomFrame extends JFrame {
 
     private JTextArea messageDisplayArea; // 消息显示区域
     private JTextArea messageInputArea; // 消息输入区域
     private JList<String> userList; // 用户列表
-    private JButton sendButton; // 发送按钮
+    private JButton sendButton;// 发送按钮
+    private Socket socket;
 
     public ChatRoomFrame() {
         // 设置窗口标题
@@ -79,6 +84,16 @@ public class ChatRoomFrame extends JFrame {
             }
         });
 
+        sendButton.addActionListener(e -> {
+                String message = messageInputArea.getText();
+                messageInputArea.setText("");
+            try {
+                sendMsgToServer(message);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+
 // 将按钮添加到底部面板
         bottomPanel.add(sendButton, BorderLayout.EAST);
 
@@ -86,4 +101,27 @@ public class ChatRoomFrame extends JFrame {
         setVisible(true);
     }
 
+    private void sendMsgToServer(String message) throws Exception {
+        DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+        dataOutputStream.writeInt(2);
+        dataOutputStream.writeUTF(message);
+        dataOutputStream.flush();
+    }
+
+    public ChatRoomFrame(String nickname, Socket socket) {
+        this();
+        this.setTitle(nickname + " - Chat Room");
+        this.socket = socket;//把这个socket交给一个thread来读取来自服务端的群聊信息和在线人数
+        new ClientReaderThread(socket,this).start();
+    }
+
+    public void updateOnlineUsers(String[] onlineUsers) {
+        //把线程读取到的在线用户名称刷新到ui上
+        userList.setListData(onlineUsers);
+    }
+
+    public void showMsgToAll(String msg) {
+        //更新群聊消息并展示
+        messageDisplayArea.append(msg);
+    }
 }
